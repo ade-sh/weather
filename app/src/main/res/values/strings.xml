@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">weather</string>
+    <string name="title">Title</string>
+    <string name="value">Value</string>
+    <string name="weatherimage">weatherImage</string>
+    <string name="header_image">Header Image</string>
+    <string name="GPSAlertDialogTitle">GPS Permission</string>
+    <string name="GPSAlertDialogMessage">Access your location</string>
+    <string name="action_settings">Yes</string>
+    <string name="cancel">Cancel</string>
+    <string name="title_activity_main2">Main2Activity</string>
+    <string name="refresh">Refresh</string>
+</resources>
