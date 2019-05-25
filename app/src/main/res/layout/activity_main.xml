@@ -53,6 +53,7 @@
             android:id="@+id/btn_refresh"
             android:layout_width="50dp"
             android:layout_height="50dp"
+            android:baselineAligned="false"
             android:contentDescription="@string/refresh"
             android:elevation="8dp"
             android:gravity="end|top"

@@ -6,7 +6,6 @@ package com.adesh.weather.actvity;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -20,12 +19,14 @@ import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
 
+import static android.content.Context.LOCATION_SERVICE;
 
-public class LocationTracker extends Service implements LocationListener {
+
+public class LocationTracker implements LocationListener {
     // The minimum distance to change updates in meters
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 1;
     // The minimum time beetwen updates in milliseconds
-    private static final long MIN_TIME_BW_UPDATES = 3000;
+    private static final long MIN_TIME_BW_UPDATES = 90000;
     // Declaring a Location Manager
     protected LocationManager locationManager;
     // flag for GPS Status
@@ -44,6 +45,7 @@ public class LocationTracker extends Service implements LocationListener {
     }
 
     public android.location.Location getLocation() {
+        Activity act2 = (Activity) mContext;
         try {
             locationManager = (LocationManager) mContext
                     .getSystemService(LOCATION_SERVICE);
@@ -59,22 +61,24 @@ public class LocationTracker extends Service implements LocationListener {
             if (!isGPSEnabled && !isNetworkEnabled) {
                 // location service disabled
                 Toast t = Toast.makeText(mContext, "Location Service Disables", Toast.LENGTH_SHORT);
+                t.show();
             } else {
                 this.canGetLocation = true;
 
                 // if GPS Enabled get lat/long using GPS Services
 
                 if (isGPSEnabled) {
-                    Activity act2 = (Activity) mContext;
                     if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
                         ActivityCompat.requestPermissions(act2,
                                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1
                         );
+                        this.getLocation();
                     } else if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         ActivityCompat.requestPermissions(act2,
                                 new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1
                         );
+                        this.getLocation();
                     } else {
                         locationManager.requestLocationUpdates(
                                 LocationManager.GPS_PROVIDER, MIN_TIME_BW_UPDATES,
@@ -87,10 +91,16 @@ public class LocationTracker extends Service implements LocationListener {
                         Log.d("GPS Enabled", "GPS Enabled");
                     }
 
-                }
 
+                }
                 // First get location from Network Provider
                 if (isNetworkEnabled) {
+                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(act2,
+                                new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1
+                        );
+                        this.getLocation();
+                    }
                     if (location == null) {
                         locationManager.requestLocationUpdates(
                                 LocationManager.NETWORK_PROVIDER,
@@ -108,6 +118,7 @@ public class LocationTracker extends Service implements LocationListener {
 
                 }
             }
+
         } catch (Exception e) {
             // e.printStackTrace();
             Log.e("Error : Location",
@@ -150,9 +161,6 @@ public class LocationTracker extends Service implements LocationListener {
     }
 
     public void onLocationChanged(Location location) {
-        Toast.makeText(mContext, " Ubicación Obtenida: " + location.toString(), Toast.LENGTH_LONG).show();
-        Log.d("ttt", "onLocationChanged:Location " + location);
-        Log.d("ttt", "onLocationChanged: l,t" + location.getLongitude() + " " + location.getLatitude());
         updateGPSCoordinates(location);
     }
 

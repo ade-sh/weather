@@ -10,4 +10,7 @@
     <string name="cancel">Cancel</string>
     <string name="title_activity_main2">Main2Activity</string>
     <string name="refresh">Refresh</string>
+    <string name="appwidget_text">40°    Cloudy Hell</string>
+    <string name="add_widget">Add widget</string>
+    <string name="AK47">http://api.openweathermap.org/data/2.5/</string>
 </resources>

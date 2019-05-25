@@ -15,4 +15,7 @@ public interface WeatherApiEndpointInterrface {
     //api.openweathermap.org/data/2.5/weather?lat=35&lon=139&units=metric
     @GET("weather")
     Call<weatherData> getData(@Query("lat") String lat, @Query("lon") String lon, @Query("units") String Tunits, @Query("APPID") String appId);
+
+    @GET("weather")
+    Call<weatherData> getData(@Query("q") String CityName, @Query("units") String Tunits, @Query("APPID") String appId);
 }
