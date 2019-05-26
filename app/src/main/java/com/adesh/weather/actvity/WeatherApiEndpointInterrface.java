@@ -18,4 +18,5 @@ public interface WeatherApiEndpointInterrface {
 
     @GET("weather")
     Call<weatherData> getData(@Query("q") String CityName, @Query("units") String Tunits, @Query("APPID") String appId);
+
 }

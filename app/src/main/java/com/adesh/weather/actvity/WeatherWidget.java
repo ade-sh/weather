@@ -3,43 +3,46 @@ package com.adesh.weather.actvity;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Log;
 import android.widget.RemoteViews;
 
 import com.adesh.weather.R;
 import com.adesh.weather.model.weatherData;
 
+import org.jetbrains.annotations.NotNull;
+
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Objects;
+
 import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
+import okhttp3.Request;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
+import static android.content.ContentValues.TAG;
+
 /**
  * Implementation of App Widget functionality.
  */
 public class WeatherWidget extends AppWidgetProvider {
-
+    RemoteViews views;
     void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                          int appWidgetId) {
         CharSequence widgetText = context.getString(R.string.appwidget_text);
         // Construct the RemoteViews object
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.weather_widget);
+        views = new RemoteViews(context.getPackageName(), R.layout.weather_widget);
         views.setTextViewText(R.id.tvTempWid, widgetText);
 
         // Instruct the widget manager to update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views);
-        HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-        // set your desired log level
-        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
-
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
-        // add your other interceptors …
-
-        // add logging as last interceptor
-        httpClient.addInterceptor(logging);
 
         final String BASE_URL = "http://api.openweathermap.org/data/2.5/";
         Retrofit retrofit = new Retrofit.Builder()
@@ -60,6 +63,7 @@ public class WeatherWidget extends AppWidgetProvider {
                 //Log.i("Data", data.getSys().getCountry());
                 views.setTextViewText(R.id.tvTempWid, data.getMain().getTemp() + "°C ");
                 views.setTextViewText(R.id.tvCloudWid, data.getWeather().get(0).getDescription());
+                setImgRes(data.getWeather().get(0).getIcon());
             }
 
             @Override
@@ -67,6 +71,34 @@ public class WeatherWidget extends AppWidgetProvider {
                 // Log error here since request failed
                 Log.e("prepareData", "on Failure" + t.getLocalizedMessage() + t.getStackTrace());
 
+            }
+        });
+    }
+
+    private void setImgRes(String icon) {
+
+        final String BASE_URL = "http://api.openweathermap.org/img/w/" + icon + ".png";
+        OkHttpClient client = new OkHttpClient();
+
+        Request request = new Request.Builder()
+                .url(BASE_URL)
+                .build();
+
+        client.newCall(request).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onFailure(@NotNull okhttp3.Call call, @NotNull IOException e) {
+                Log.e(TAG, "onFailure: Well Fuck");
+                e.printStackTrace();
+            }
+
+            @Override
+            public void onResponse(@NotNull okhttp3.Call call, @NotNull okhttp3.Response response) throws IOException {
+                Log.e(TAG, "onResponse: I am Here");
+                InputStream ins = Objects.requireNonNull(response.body()).byteStream();
+                BufferedInputStream bufferedInputStream = new BufferedInputStream(ins);
+                Bitmap bmp = BitmapFactory.decodeStream(bufferedInputStream);
+                Log.d(TAG, "onResponse: " + bmp);
+                views.setImageViewBitmap(R.id.ivwid, bmp);
             }
         });
     }

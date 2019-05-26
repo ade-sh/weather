@@ -3,6 +3,7 @@ package com.adesh.weather.actvity;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -11,6 +12,8 @@ import android.location.Geocoder;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.AlphaAnimation;
@@ -34,6 +37,7 @@ import com.adesh.weather.model.weatherData;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     CollapsingToolbarLayout collapsingToolbar;
     weatherData data;
     private String myCity;
-    private ImageView headertImg;
+    private ImageView headertImg, ImageIcon;
     private weatherAdapter wAdapter;
     private RecyclerView rvWeather;
     private ImageButton btn_ref;
@@ -68,11 +72,11 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         rvWeather = findViewById(R.id.rv_main_view);
         wdata = new LinkedHashMap<String, String>();
-
         appbar = findViewById(R.id.appbar);
         appbar.getLayoutParams().height = (int) (getScreenHeight(MainActivity.this) * 0.80);
         if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -81,7 +85,29 @@ public class MainActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1
             );
         }
+
+        //TODO:Add SOME LOGIC For recycler View Background ,Cant Figure it out now
+        /*
+        appbar.addOnOffsetChangedListener((appBarLayout, verticalOffset) -> {
+            if (Math.abs(verticalOffset) == appBarLayout.getTotalScrollRange()) {
+                // Collapsed
+            } else if (verticalOffset == 0) {
+                // Expanded
+                Animation fadeIn = new AlphaAnimation(0, 1);
+                fadeIn.setInterpolator(new DecelerateInterpolator()); // add this
+                fadeIn.setDuration(1000);
+                AnimationSet animation = new AnimationSet(false); // change to false
+                animation.addAnimation(fadeIn);
+                rvImg.setVisibility(View.VISIBLE);    //Visible or invisible by default - this will apply when the animation ends
+                rvImg.setImageResource(R.drawable.clouds);
+
+            } else {
+                // Somewhere in between
+                rvImg.setVisibility(View.INVISIBLE);
+            }
+        });*/
         headertImg = findViewById(R.id.header);
+        ImageIcon = findViewById(R.id.ivIcon);
         wAdapter = new weatherAdapter(wdata);
         RecyclerView.LayoutManager llm = new LinearLayoutManager(this);
         rvWeather.setLayoutManager(llm);
@@ -91,16 +117,29 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         collapsingToolbar = findViewById(R.id.collapsing_toolbar);
         collapsingToolbar.setTitle("Weather");
-
         setTBColor(R.drawable.ic_launcher);
-
-        btn_ref = findViewById(R.id.btn_refresh);
-        btn_ref.setOnClickListener(v -> {
-            Toast t = Toast.makeText(getApplicationContext(), "Refreshing", Toast.LENGTH_SHORT);
-            t.show();
-            prepareData();
-        });
         prepareData();
+
+    }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_refresh) {
+            Toast.makeText(MainActivity.this, "Refreshing", Toast.LENGTH_LONG).show();
+            prepareData();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     public void prepareData() {
@@ -135,8 +174,19 @@ public class MainActivity extends AppCompatActivity {
                 //Log.i("Status Code", statusCode + "");
                 //Log.i("Data", data.getSys().getCountry());
                 collapsingToolbar.setTitle(data.getMain().getTemp() + "°C  " + data.getWeather().get(0).getDescription());
-                convertToHM();
-
+                int res = getResources().getIdentifier("a" + data.getWeather().get(0).getIcon(), "drawable", "com.adesh.weather");
+                Log.d("Ff", "onResponse: " + "a" + data.getWeather().get(0).getIcon());
+                ImageIcon.setImageResource(res);
+                convertToHM(data);
+                //Saving DataTime
+                Context context = getApplicationContext();
+                SharedPreferences sharedPref = context.getSharedPreferences(
+                        getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sharedPref.edit();
+                java.util.Date dtime = new java.util.Date((long) data.getDt() * 1000);
+                String DateTime = dtime.toString();
+                editor.putString("savingTime", DateTime);
+                editor.apply();
             }
 
             @Override
@@ -148,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void convertToHM() {
+    private void convertToHM(weatherData data) {
         String vis = "hello";
         //vis=data.getVisibility().toString();
         wdata.put("Temparature", data.getMain().getTemp().toString() + "°C  ");
@@ -171,12 +221,23 @@ public class MainActivity extends AppCompatActivity {
         wdata.put("Current City", myCity);
         wAdapter.notifyDataSetChanged();
         //TODO:Dynamically add back img via res
-        int[] imagesToShow = {R.drawable.ic_launcher, R.drawable.clouds};
-        setWeatherImage(imagesToShow, 0);
+        //TODO: Fix geo coder
+        Context context = getApplicationContext();
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String wdCodes = sharedPref.getString("Codes", "0");
+
+        if (wdCodes.equals("0") || !wdCodes.equals(data.getWeather().get(0).getIcon())) {
+            int[] imagesToShow = {R.drawable.ic_launcher, R.drawable.clouds};
+            setWeatherImage(imagesToShow, 0);
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putString("Codes", data.getWeather().get(0).getIcon());
+            editor.commit();
+        }
     }
 
     private void setWeatherImage(final int[] images, int ImageIndex) {
-        int fadeInDuration = 500; // Configure time values here
+        int fadeInDuration = 1500; // Configure time values here
         int timeBetween = 3000;
         int fadeOutDuration = 1000;
 
@@ -258,5 +319,21 @@ public class MainActivity extends AppCompatActivity {
             collapsingToolbar.setContentScrimColor(mutedColor);
 
         });
+    }
+
+    public void getFromStorage(weatherData data) {
+        String filename = "jsonFile";
+        String fileContents = String.valueOf(data);
+        FileOutputStream outputStream;
+
+        try {
+            outputStream = openFileOutput(filename, Context.MODE_PRIVATE);
+            outputStream.write(fileContents.getBytes());
+            outputStream.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 }
