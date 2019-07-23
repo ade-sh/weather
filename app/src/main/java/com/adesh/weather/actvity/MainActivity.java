@@ -37,8 +37,11 @@ import com.adesh.weather.model.weatherData;
 import com.google.android.material.appbar.AppBarLayout;
 import com.google.android.material.appbar.CollapsingToolbarLayout;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -118,7 +121,17 @@ public class MainActivity extends AppCompatActivity {
         collapsingToolbar = findViewById(R.id.collapsing_toolbar);
         collapsingToolbar.setTitle("Weather");
         setTBColor(R.drawable.ic_launcher);
+        Context context = getApplicationContext();
+        java.util.Date dtime = new java.util.Date();
+
+        SharedPreferences sharedPref = context.getSharedPreferences(
+                getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String strtime = sharedPref.getString("savingTime", String.valueOf(dtime));
+        //TODO: convert sf to int and get permissipojn
+
         prepareData();
+
+        //getFromStorage();
 
     }
 
@@ -193,12 +206,18 @@ public class MainActivity extends AppCompatActivity {
             public void onFailure(Call<weatherData> call, Throwable t) {
                 // Log error here since request failed
                 Log.e("prepareData", "on Failure" + t.getLocalizedMessage() + t.getStackTrace());
-
+                getFromStorage();
             }
         });
     }
 
     private void convertToHM(weatherData data) {
+        if (data == null) {
+            Toast t = Toast.makeText(getApplicationContext(), "Internet Chalu kar be", Toast.LENGTH_SHORT);
+            t.show();
+            return;
+        }
+
         String vis = "hello";
         //vis=data.getVisibility().toString();
         wdata.put("Temparature", data.getMain().getTemp().toString() + "°C  ");
@@ -220,19 +239,41 @@ public class MainActivity extends AppCompatActivity {
         wdata.put("City", data.getName());
         wdata.put("Current City", myCity);
         wAdapter.notifyDataSetChanged();
-        //TODO:Dynamically add back img via res
+        //TODO:Dynamically add back img via res and set a default img
         //TODO: Fix geo coder
+        //TODO: ADD Chache System
         Context context = getApplicationContext();
         SharedPreferences sharedPref = context.getSharedPreferences(
                 getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         String wdCodes = sharedPref.getString("Codes", "0");
 
-        if (wdCodes.equals("0") || !wdCodes.equals(data.getWeather().get(0).getIcon())) {
+        storeInLocal(data);
+
+        assert wdCodes != null;
+        //TODO: Fix this multi refresh
+        //if (wdCodes.equals("0") || !wdCodes.equals(data.getWeather().get(0).getIcon())) {
             int[] imagesToShow = {R.drawable.ic_launcher, R.drawable.clouds};
             setWeatherImage(imagesToShow, 0);
             SharedPreferences.Editor editor = sharedPref.edit();
             editor.putString("Codes", data.getWeather().get(0).getIcon());
-            editor.commit();
+        editor.apply();
+        // }
+    }
+
+    private void storeInLocal(weatherData data) {
+        File file;
+        String fileName = "jsonFile";
+        String fileContents = String.valueOf(data);
+        FileOutputStream outputStream;
+
+        try {
+            file = File.createTempFile(fileName, ".txt", getApplicationContext().getCacheDir());
+            outputStream = openFileOutput(fileName, Context.MODE_PRIVATE);
+            outputStream.write(fileContents.getBytes());
+            outputStream.close();
+
+        } catch (IOException e) {
+            // Error while creating file
         }
     }
 
@@ -321,19 +362,21 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void getFromStorage(weatherData data) {
-        String filename = "jsonFile";
-        String fileContents = String.valueOf(data);
-        FileOutputStream outputStream;
-
+    public void getFromStorage() {
+        File file;
+        String fileName = "jsonFile";
+        weatherData data1 = null;
+        File directory = getApplicationContext().getFilesDir();
+        file = new File(directory, fileName);
+        Toast t = Toast.makeText(getApplicationContext(), "From Local", Toast.LENGTH_SHORT);
+        t.show();
         try {
-            outputStream = openFileOutput(filename, Context.MODE_PRIVATE);
-            outputStream.write(fileContents.getBytes());
-            outputStream.close();
-
-        } catch (Exception e) {
+            FileInputStream fi = new FileInputStream(file);
+            ObjectInputStream oi = new ObjectInputStream(fi);
+            data1 = (weatherData) oi.readObject();
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-
+        convertToHM(data1);
     }
 }
